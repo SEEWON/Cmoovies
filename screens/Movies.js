@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Dimensions, FlatList } from 'react-native';
 import Swiper from 'react-native-swiper';
 import styled from 'styled-components/native';
@@ -15,24 +15,24 @@ const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 const Movies = () => {
   const queryclient = useQueryClient();
-  const {
-    isLoading: nowPlayingLoading,
-    data: nowPlayingData,
-    isRefetching: isRefetchingNowPlaying,
-  } = useQuery(['movies', 'nowPlaying'], moviesApi.nowPlaying);
-  const {
-    isLoading: upcomingLoading,
-    data: upcomingData,
-    isRefetching: isRefetchingUpcoming,
-  } = useQuery(['movies', 'upcoming'], moviesApi.upcoming);
-  const {
-    isLoading: trendingLoading,
-    data: trendingData,
-    isRefetching: isRefetchingTrending,
-  } = useQuery(['movies', 'trending'], moviesApi.trending);
+  const [refreshing, setRefreshing] = useState(false);
+  const { isLoading: nowPlayingLoading, data: nowPlayingData } = useQuery(
+    ['movies', 'nowPlaying'],
+    moviesApi.nowPlaying
+  );
+  const { isLoading: upcomingLoading, data: upcomingData } = useQuery(
+    ['movies', 'upcoming'],
+    moviesApi.upcoming
+  );
+  const { isLoading: trendingLoading, data: trendingData } = useQuery(
+    ['movies', 'trending'],
+    moviesApi.trending
+  );
 
   const onRefresh = async () => {
-    queryclient.refetchQueries(['movies']);
+    setRefreshing(true);
+    await queryclient.refetchQueries(['movies']);
+    setRefreshing(false);
   };
 
   const renderVMedia = ({ item }) => (
@@ -54,8 +54,6 @@ const Movies = () => {
   const movieKeyExtractor = (item) => item.id + '';
 
   const loading = nowPlayingLoading || trendingLoading || upcomingLoading;
-  const refreshing =
-    isRefetchingNowPlaying || isRefetchingUpcoming || isRefetchingTrending;
   return loading ? (
     <Loader />
   ) : (
