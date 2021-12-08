@@ -11,10 +11,16 @@ const HMedia = ({
   overview,
   releaseDate,
   voteAverage,
+  fullData,
 }) => {
   const navigation = useNavigation();
   const goToDetail = () => {
-    navigation.navigate('Stack', { screen: 'Detail' });
+    navigation.navigate('Stack', {
+      screen: 'Detail',
+      params: {
+        ...fullData,
+      },
+    });
   };
   return (
     <TouchableOpacity onPress={goToDetail}>
