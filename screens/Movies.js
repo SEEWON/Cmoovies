@@ -3,9 +3,8 @@ import { Dimensions, FlatList } from 'react-native';
 import Swiper from 'react-native-swiper';
 import styled from 'styled-components/native';
 import Slide from '../components/Slide';
-import VMedia from '../components/VMedia';
 import HMedia from '../components/HMedia';
-import { useQuery, useQueryClient } from 'react-query';
+import { useInfiniteQuery, useQuery, useQueryClient } from 'react-query';
 import { moviesApi } from '../api';
 import Loader from '../components/Loader';
 import Hlist from '../components/HList';
@@ -20,10 +19,17 @@ const Movies = () => {
     ['movies', 'nowPlaying'],
     moviesApi.nowPlaying
   );
-  const { isLoading: upcomingLoading, data: upcomingData } = useQuery(
-    ['movies', 'upcoming'],
-    moviesApi.upcoming
-  );
+  const {
+    isLoading: upcomingLoading,
+    data: upcomingData,
+    hasNextPage,
+    fetchNextPage,
+  } = useInfiniteQuery(['movies', 'upcoming'], moviesApi.upcoming, {
+    getNextPageParam: (currentPage) => {
+      const nextPage = currentPage.page + 1;
+      return nextPage > currentPage.total_pages ? null : nextPage;
+    },
+  });
   const { isLoading: trendingLoading, data: trendingData } = useQuery(
     ['movies', 'trending'],
     moviesApi.trending
@@ -34,14 +40,6 @@ const Movies = () => {
     await queryclient.refetchQueries(['movies']);
     setRefreshing(false);
   };
-
-  const renderVMedia = ({ item }) => (
-    <VMedia
-      posterPath={item.poster_path}
-      originalTitle={item.original_title}
-      voteAverage={item.vote_average}
-    />
-  );
 
   const renderHMedia = ({ item }) => (
     <HMedia
@@ -55,10 +53,17 @@ const Movies = () => {
   const movieKeyExtractor = (item) => item.id + '';
 
   const loading = nowPlayingLoading || trendingLoading || upcomingLoading;
+  const loadMore = () => {
+    if (hasNextPage) {
+      fetchNextPage();
+    }
+  };
   return loading ? (
     <Loader />
   ) : (
     <FlatList
+      onEndReached={loadMore}
+      onEndReachedThreshold={0.4}
       onRefresh={onRefresh}
       refreshing={refreshing}
       ListHeaderComponent={
@@ -92,15 +97,13 @@ const Movies = () => {
           <ComingSoonTitle>Coming soon</ComingSoonTitle>
         </>
       }
-      data={upcomingData.results}
+      data={upcomingData.pages.map((page) => page.results).flat()}
       keyExtractor={movieKeyExtractor}
       ItemSeparatorComponent={HSeperator}
       renderItem={renderHMedia}
     ></FlatList>
   );
 };
-
-const Container = styled.ScrollView``;
 
 const ListTitle = styled.Text`
   color: white;
@@ -109,21 +112,10 @@ const ListTitle = styled.Text`
   margin-left: 30px;
 `;
 
-const TrendingScroll = styled.FlatList`
-  margin-top: 20px;
-`;
-
-const ListContainer = styled.View`
-  margin-bottom: 40px;
-`;
-
 const ComingSoonTitle = styled(ListTitle)`
   margin-bottom: 10px;
 `;
 
-const VSeperator = styled.View`
-  width: 20px;
-`;
 const HSeperator = styled.View`
   height: 20px;
 `;
